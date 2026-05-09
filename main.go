@@ -7,6 +7,7 @@ import (
 	"snake_golang/assets"
 	"snake_golang/assets/skins"
 	game "snake_golang/game"
+	"snake_golang/game/profile"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/audio"
@@ -20,6 +21,14 @@ func main() {
 		log.Fatal(err)
 	}
 	w := game.NewWorld()
+	config, err := profile.LoadConfig()
+	if err != nil {
+		log.Printf("load config: %v", err)
+	}
+	if config.PlayerName == "" {
+		w.State = game.StateNameInput
+	}
+
 	ebiten.SetFullscreen(false)
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeDisabled)
 
@@ -67,6 +76,7 @@ func main() {
 		World:      w,
 		FaceSource: faceSource,
 		Audio:      gameAudio,
+		PlayerName: config.PlayerName,
 	}
 	if err := ebiten.RunGame(screen); err != nil {
 		log.Fatal(err)

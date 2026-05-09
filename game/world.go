@@ -13,6 +13,7 @@ const (
 	StatePlaying
 	StatePaused
 	StateGameOver
+	StateNameInput
 )
 
 func (s State) String() string {
@@ -27,6 +28,8 @@ func (s State) String() string {
 		return "Paused"
 	case StateGameOver:
 		return "GameOver"
+	case StateNameInput:
+		return "NameInput"
 	default:
 		return "State(unknown)"
 	}

@@ -31,6 +31,10 @@ type Screen struct {
 	Menu       *menu.Menu
 	FaceSource *etxt.GoTextFaceSource
 	Audio      *Audio
+
+	PlayerName string
+	nameDraft  []rune
+	nameError  string
 }
 
 func (s *Screen) StartGame() {
@@ -119,8 +123,17 @@ func (s *Screen) Update() error {
 		s.Menu = menu.NewMenu(s)
 	}
 
+	if w.State == StateNameInput {
+		s.syncMusic()
+		return s.UpdateNameInput()
+	}
+
 	if w.State == StateMenu {
 		s.syncMusic()
+		if inpututil.IsKeyJustPressed(ebiten.KeyN) {
+			s.BeginNameInput()
+			return nil
+		}
 		return s.Menu.Update()
 	}
 
@@ -186,8 +199,13 @@ func (s *Screen) Update() error {
 }
 
 func (s *Screen) Draw(screen *ebiten.Image) {
+	if s.World != nil && s.World.State == StateNameInput {
+		DrawNameInput(screen, s.FaceSource, string(s.nameDraft), s.nameError, s.PlayerName != "")
+		return
+	}
 	if s.World != nil && s.World.State == StateMenu {
 		menu.Draw(screen, s.FaceSource, s.Menu)
+		DrawMenuPlayerName(screen, s.FaceSource, s.PlayerName)
 		return
 	}
 	DrawWorld(s.World, s.FaceSource, screen)
