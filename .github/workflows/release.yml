@@ -1,0 +1,71 @@
+name: Release Game
+
+on:
+  push:
+    branches:
+      - github-actions-workflow
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            goos: linux
+            asset: snake-linux-amd64.tar.gz
+          - os: macos-latest
+            goos: darwin
+            asset: snake-macos-amd64.tar.gz
+          - os: windows-latest
+            goos: windows
+            asset: snake-windows-amd64.zip
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Linux deps
+        if: matrix.goos == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgl1-mesa-dev xorg-dev libasound2-dev libxi-dev libxxf86vm-dev
+
+      - name: Build game
+        env:
+          CGO_ENABLED: 1
+          GOOS: ${{ matrix.goos }}
+        shell: bash
+        run: |
+          mkdir -p dist
+          BINARY=snake
+          if [ "${{ matrix.goos }}" = "windows" ]; then BINARY=snake.exe; fi
+          go build \
+            -trimpath \
+            -ldflags "-s -w -X 'snake_golang/game/leaderboard.DefaultLeaderboardURL=${{ vars.LEADERBOARD_API_URL }}'" \
+            -o "dist/$BINARY" .
+
+      - name: Package
+        shell: bash
+        run: |
+          cd dist
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            7z a "../${{ matrix.asset }}" snake.exe
+          else
+            tar -czf "../${{ matrix.asset }}" snake
+          fi
+
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ matrix.asset }}
+          generate_release_notes: true
