@@ -1,4 +1,8 @@
 .DS_Store
-snake
+snake_golang
 snake.exe
 *.exe
+
+.local/
+.aws-sam/
+samconfig.toml

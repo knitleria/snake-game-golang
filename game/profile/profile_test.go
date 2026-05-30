@@ -36,3 +36,48 @@ func TestNormalizePlayerNameRejectsInvalidValues(t *testing.T) {
 		}
 	}
 }
+
+func TestEnsurePlayerID(t *testing.T) {
+	t.Parallel()
+
+	config := Config{PlayerName: "Valeria"}
+	if err := EnsurePlayerID(&config); err != nil {
+		t.Fatalf("EnsurePlayerID: %v", err)
+	}
+	if len(config.PlayerID) != 32 {
+		t.Fatalf("expected 32-char player id, got %q", config.PlayerID)
+	}
+}
+
+func TestEnsurePlayerIDPreservesExisting(t *testing.T) {
+	t.Parallel()
+
+	const existing = "abcdefabcdefabcdefabcdefabcdefab"
+	config := Config{PlayerID: existing}
+	if err := EnsurePlayerID(&config); err != nil {
+		t.Fatalf("EnsurePlayerID: %v", err)
+	}
+	if config.PlayerID != existing {
+		t.Fatalf("EnsurePlayerID overrode existing id: got %q want %q", config.PlayerID, existing)
+	}
+}
+
+func TestNormalizePlayerID(t *testing.T) {
+	t.Parallel()
+
+	id, err := NormalizePlayerID("ABCDEFABCDEFABCDEFABCDEFABCDEFAB")
+	if err != nil {
+		t.Fatalf("NormalizePlayerID: %v", err)
+	}
+	if id != "abcdefabcdefabcdefabcdefabcdefab" {
+		t.Fatalf("unexpected normalized id: %s", id)
+	}
+}
+
+func TestNormalizePlayerIDRejectsBad(t *testing.T) {
+	t.Parallel()
+
+	if _, err := NormalizePlayerID("not-a-hex-id"); err != ErrBadPlayerID {
+		t.Fatalf("expected ErrBadPlayerID, got %v", err)
+	}
+}

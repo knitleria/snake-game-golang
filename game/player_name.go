@@ -58,11 +58,24 @@ func (s *Screen) saveNameDraft() bool {
 		s.nameError = nameErrorHelper(err)
 		return false
 	}
-	if err := profile.SaveConfig(profile.Config{PlayerName: name}); err != nil {
+
+	config, err := profile.LoadConfig()
+	if err != nil {
 		s.nameError = nameErrorHelper(err)
 		return false
 	}
+	config.PlayerName = name
+	if err := profile.EnsurePlayerID(&config); err != nil {
+		s.nameError = nameErrorHelper(err)
+		return false
+	}
+	if err := profile.SaveConfig(config); err != nil {
+		s.nameError = nameErrorHelper(err)
+		return false
+	}
+
 	s.PlayerName = name
+	s.PlayerID = config.PlayerID
 	s.nameDraft = []rune(name)
 	s.nameError = ""
 	return true
@@ -76,6 +89,8 @@ func nameErrorHelper(err error) string {
 		return i18n.T("name.error_long")
 	case errors.Is(err, profile.ErrBadName):
 		return i18n.T("name.error_invalid")
+	case errors.Is(err, profile.ErrBadPlayerID):
+		return i18n.T("name.error_save")
 	default:
 		return i18n.T("name.error_save")
 	}

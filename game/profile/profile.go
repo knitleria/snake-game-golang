@@ -1,11 +1,14 @@
 package profile
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"unicode"
 )
@@ -18,12 +21,16 @@ const (
 
 type Config struct {
 	PlayerName string `json:"player_name"`
+	PlayerID   string `json:"player_id"`
 }
 
 var (
 	ErrEmptyName   = errors.New("empty name")
 	ErrNameTooLong = errors.New("name too long")
 	ErrBadName     = errors.New("name contains unsupported characters")
+	ErrBadPlayerID = errors.New("bad player id")
+
+	playerIDPattern = regexp.MustCompile(`^[a-f0-9]{32}$`)
 )
 
 func ConfigPath() (string, error) {
@@ -32,6 +39,42 @@ func ConfigPath() (string, error) {
 		return "", fmt.Errorf("get user config dir: %w", err)
 	}
 	return filepath.Join(dir, AppDirName, ConfigFileName), nil
+}
+
+func NewPlayerID() (string, error) {
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
+		return "", fmt.Errorf("read random bytes: %w", err)
+	}
+	return hex.EncodeToString(b), nil
+}
+
+func NormalizePlayerID(id string) (string, error) {
+	id = strings.ToLower(strings.TrimSpace(id))
+	if id == "" {
+		return "", nil
+	}
+	if !playerIDPattern.MatchString(id) {
+		return "", ErrBadPlayerID
+	}
+	return id, nil
+}
+
+func EnsurePlayerID(config *Config) error {
+	id, err := NormalizePlayerID(config.PlayerID)
+	if err != nil {
+		return err
+	}
+	if id != "" {
+		config.PlayerID = id
+		return nil
+	}
+	id, err = NewPlayerID()
+	if err != nil {
+		return err
+	}
+	config.PlayerID = id
+	return nil
 }
 
 func NormalizePlayerName(name string) (string, error) {
@@ -64,14 +107,24 @@ func LoadConfig() (Config, error) {
 		}
 		return Config{}, fmt.Errorf("read config file: %w", err)
 	}
+
 	var config Config
 	if err := json.Unmarshal(b, &config); err != nil {
 		return Config{}, fmt.Errorf("unmarshal config: %w", err)
 	}
-	config.PlayerName, err = NormalizePlayerName(config.PlayerName)
-	if err != nil {
-		return Config{}, fmt.Errorf("normalize player name: %w", err)
+
+	if strings.TrimSpace(config.PlayerName) != "" {
+		config.PlayerName, err = NormalizePlayerName(config.PlayerName)
+		if err != nil {
+			return Config{}, fmt.Errorf("normalize player name: %w", err)
+		}
 	}
+
+	config.PlayerID, err = NormalizePlayerID(config.PlayerID)
+	if err != nil {
+		return Config{}, fmt.Errorf("normalize player id: %w", err)
+	}
+
 	return config, nil
 }
 
@@ -81,6 +134,10 @@ func SaveConfig(config Config) error {
 		return fmt.Errorf("normalize player name: %w", err)
 	}
 	config.PlayerName = name
+
+	if err := EnsurePlayerID(&config); err != nil {
+		return fmt.Errorf("ensure player id: %w", err)
+	}
 
 	path, err := ConfigPath()
 	if err != nil {

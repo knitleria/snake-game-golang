@@ -8,6 +8,7 @@ import (
 	"snake_golang/assets/mods"
 	"snake_golang/assets/skins"
 	"snake_golang/game/i18n"
+	gamelb "snake_golang/game/leaderboard"
 	"snake_golang/game/menu"
 	"time"
 
@@ -33,14 +34,29 @@ type Screen struct {
 	Audio      *Audio
 
 	PlayerName string
+	PlayerID   string
 	nameDraft  []rune
 	nameError  string
+
+	LeaderboardClient *gamelb.Client
+
+	scoreSubmitCh       chan scoreSubmitResult
+	scoreSubmitState    scoreSubmitState
+	scoreSubmitRank     int
+	scoreSubmitImproved bool
+	scoreSubmitError    string
+
+	leaderboardCh      chan leaderboardFetchResult
+	leaderboardLoading bool
+	leaderboardError   string
+	leaderboardEntries []gamelb.Entry
 }
 
 func (s *Screen) StartGame() {
 	if s.World == nil {
 		return
 	}
+	s.resetScoreSubmitState()
 	s.World.WrapEdges = mods.Current() == mods.Defaltyk
 	s.World.State = StateWaiting
 	s.World.LastMove = time.Now()
@@ -123,6 +139,8 @@ func (s *Screen) Update() error {
 		s.Menu = menu.NewMenu(s)
 	}
 
+	s.pollLeaderboardAsync()
+
 	if w.State == StateNameInput {
 		s.syncMusic()
 		return s.UpdateNameInput()
@@ -137,8 +155,14 @@ func (s *Screen) Update() error {
 		return s.Menu.Update()
 	}
 
+	if w.State == StateLeaderboard {
+		s.syncMusic()
+		return s.UpdateLeaderboard()
+	}
+
 	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) &&
 		(w.State == StatePaused || w.State == StateGameOver) {
+		s.resetScoreSubmitState()
 		s.World = NewWorld()
 		w = s.World
 		s.syncMusic()
@@ -150,12 +174,14 @@ func (s *Screen) Update() error {
 		case StateWaiting:
 			w.State = StatePlaying
 			w.LastMove = time.Now()
+			w.StartedAt = time.Now()
 		case StatePlaying:
 			w.State = StatePaused
 		case StatePaused:
 			w.State = StatePlaying
 			w.LastMove = time.Now()
 		case StateGameOver:
+			s.resetScoreSubmitState()
 			s.World = newWorldPlaying()
 			w = s.World
 		}
@@ -190,10 +216,14 @@ func (s *Screen) Update() error {
 		return nil
 	}
 	w.LastMove = time.Now()
+	previousState := w.State
 	prevScore := w.Score
 	Step(w)
 	if w.Score > prevScore {
 		s.playEatSound()
+	}
+	if previousState != StateGameOver && w.State == StateGameOver {
+		s.onGameOver()
 	}
 	return nil
 }
@@ -208,9 +238,16 @@ func (s *Screen) Draw(screen *ebiten.Image) {
 		DrawMenuPlayerName(screen, s.FaceSource, s.PlayerName)
 		return
 	}
+	if s.World != nil && s.World.State == StateLeaderboard {
+		DrawLeaderboardScreen(screen, s.FaceSource, s)
+		return
+	}
 	DrawWorld(s.World, s.FaceSource, screen)
 	if s.World.State == StatePlaying || s.World.State == StatePaused {
 		DrawScoreHud(screen, s.FaceSource, s.World)
+	}
+	if s.World != nil && s.World.State == StateGameOver {
+		DrawGameOverSubmitStatus(screen, s.FaceSource, s)
 	}
 }
 

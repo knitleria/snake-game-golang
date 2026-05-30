@@ -7,6 +7,7 @@ import (
 	"snake_golang/assets"
 	"snake_golang/assets/skins"
 	game "snake_golang/game"
+	"snake_golang/game/leaderboard"
 	"snake_golang/game/profile"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -27,6 +28,13 @@ func main() {
 	}
 	if config.PlayerName == "" {
 		w.State = game.StateNameInput
+	}
+	if config.PlayerName != "" && config.PlayerID == "" {
+		if err := profile.EnsurePlayerID(&config); err != nil {
+			log.Printf("ensure player id: %v", err)
+		} else if err := profile.SaveConfig(config); err != nil {
+			log.Printf("save config with player id: %v", err)
+		}
 	}
 
 	ebiten.SetFullscreen(false)
@@ -73,10 +81,12 @@ func main() {
 	}
 
 	screen := &game.Screen{
-		World:      w,
-		FaceSource: faceSource,
-		Audio:      gameAudio,
-		PlayerName: config.PlayerName,
+		World:             w,
+		FaceSource:        faceSource,
+		Audio:             gameAudio,
+		PlayerName:        config.PlayerName,
+		PlayerID:          config.PlayerID,
+		LeaderboardClient: leaderboard.NewClientFromEnv(),
 	}
 	if err := ebiten.RunGame(screen); err != nil {
 		log.Fatal(err)

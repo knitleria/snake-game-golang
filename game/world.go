@@ -14,6 +14,7 @@ const (
 	StatePaused
 	StateGameOver
 	StateNameInput
+	StateLeaderboard
 )
 
 func (s State) String() string {
@@ -30,6 +31,8 @@ func (s State) String() string {
 		return "GameOver"
 	case StateNameInput:
 		return "NameInput"
+	case StateLeaderboard:
+		return "Leaderboard"
 	default:
 		return "State(unknown)"
 	}
@@ -41,6 +44,7 @@ type World struct {
 	Direction     Point
 	NextDirection Point
 	LastMove      time.Time
+	StartedAt     time.Time
 	Apple         Point
 	Score         int
 	WrapEdges     bool
@@ -77,5 +81,6 @@ func newWorldPlaying() *World {
 	w.WrapEdges = mods.Current() == mods.Defaltyk
 	w.State = StatePlaying
 	w.LastMove = time.Now()
+	w.StartedAt = time.Now()
 	return w
 }

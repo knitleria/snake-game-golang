@@ -16,6 +16,7 @@ type Host interface {
 	ScreenSize() (int, int)
 	SwitchSkin()
 	SwitchMode()
+	OpenLeaderboard()
 }
 
 type IconButton struct {
@@ -60,6 +61,10 @@ func NewMenu(h Host) *Menu {
 			{
 				Label:   func() string { return i18n.T("menu.play") },
 				OnClick: h.StartGame,
+			},
+			{
+				Label:   func() string { return i18n.T("menu.leaderboard") },
+				OnClick: h.OpenLeaderboard,
 			},
 			{
 				Label: func() string {
