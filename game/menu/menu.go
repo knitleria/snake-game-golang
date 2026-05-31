@@ -80,7 +80,7 @@ func NewMenu(h Host) *Menu {
 			},
 		},
 		Icons: []IconButton{
-			{Image: assets.IconGitHub, URL: "https://github.com/yourusername/yourrepo"},
+			{Image: assets.IconGitHub, URL: "https://github.com/knitleria/snake-game-golang"},
 			{Image: assets.IconSoundCloud, URL: "https://soundcloud.com/halfup"},
 		},
 		LangButtons: []LangButton{
