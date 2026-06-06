@@ -5,7 +5,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=arm64 \
     go build -tags lambda.norpc -o /main ./cmd/leaderboard-lambda
 
 FROM public.ecr.aws/lambda/provided:al2023

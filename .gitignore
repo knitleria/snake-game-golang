@@ -6,3 +6,4 @@ snake.exe
 .local/
 .aws-sam/
 samconfig.toml
+.env

@@ -1,13 +1,22 @@
 package unlock
 
-import "strings"
-
-const secretCode = "qwerty"
+import (
+	"os"
+	"strings"
+)
 
 var unlocked bool
 
+func GetSecretCode() string {
+	return os.Getenv("SECRET_CODE")
+}
+
 func Check(code string) bool {
-	return strings.EqualFold(strings.TrimSpace(code), secretCode)
+	secret := GetSecretCode()
+	if secret == "" {
+		return false
+	}
+	return strings.EqualFold(strings.TrimSpace(code), secret)
 }
 
 func IsUnlocked() bool {
