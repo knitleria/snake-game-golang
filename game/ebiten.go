@@ -38,6 +38,9 @@ type Screen struct {
 	nameDraft  []rune
 	nameError  string
 
+	codeDraft []rune
+	codeError string
+
 	LeaderboardClient *gamelb.Client
 
 	scoreSubmitCh       chan scoreSubmitResult
@@ -145,11 +148,19 @@ func (s *Screen) Update() error {
 		s.syncMusic()
 		return s.UpdateNameInput()
 	}
+	if w.State == StateCodeInput {
+		s.syncMusic()
+		return s.UpdateCodeInput()
+	}
 
 	if w.State == StateMenu {
 		s.syncMusic()
 		if inpututil.IsKeyJustPressed(ebiten.KeyN) {
 			s.BeginNameInput()
+			return nil
+		}
+		if inpututil.IsKeyJustPressed(ebiten.KeyC) {
+			s.BeginCodeInput()
 			return nil
 		}
 		return s.Menu.Update()
@@ -233,9 +244,14 @@ func (s *Screen) Draw(screen *ebiten.Image) {
 		DrawNameInput(screen, s.FaceSource, string(s.nameDraft), s.nameError, s.PlayerName != "")
 		return
 	}
+	if s.World != nil && s.World.State == StateCodeInput {
+		DrawCodeInput(screen, s.FaceSource, string(s.codeDraft), s.codeError)
+		return
+	}
 	if s.World != nil && s.World.State == StateMenu {
 		menu.Draw(screen, s.FaceSource, s.Menu)
 		DrawMenuPlayerName(screen, s.FaceSource, s.PlayerName)
+		DrawMenuCodeHint(screen, s.FaceSource)
 		return
 	}
 	if s.World != nil && s.World.State == StateLeaderboard {
