@@ -7,7 +7,15 @@ import (
 
 var unlocked bool
 
+// BuildSecretCode can be injected at build time via -ldflags -X.
+// It takes precedence over the SECRET_CODE environment variable so that
+// distributed release binaries carry the code without shipping a .env file.
+var BuildSecretCode string
+
 func GetSecretCode() string {
+	if BuildSecretCode != "" {
+		return BuildSecretCode
+	}
 	return os.Getenv("SECRET_CODE")
 }
 

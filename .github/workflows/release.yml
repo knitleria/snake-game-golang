@@ -56,7 +56,7 @@ jobs:
           if [ "${{ matrix.goos }}" = "windows" ]; then BINARY=snake.exe; fi
           go build \
             -trimpath \
-            -ldflags "-s -w -X 'snake_golang/game/leaderboard.DefaultLeaderboardURL=${{ vars.LEADERBOARD_API_URL }}'" \
+            -ldflags "-s -w -X 'snake_golang/game/leaderboard.DefaultLeaderboardURL=${{ vars.LEADERBOARD_API_URL }}' -X 'snake_golang/game/unlock.BuildSecretCode=${{ secrets.UNLOCK_SECRET_CODE }}'" \
             -o "dist/$BINARY" .
 
       - name: Package
