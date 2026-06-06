@@ -15,6 +15,7 @@ const (
 	StateGameOver
 	StateNameInput
 	StateLeaderboard
+	StateCodeInput
 )
 
 func (s State) String() string {
@@ -33,6 +34,8 @@ func (s State) String() string {
 		return "NameInput"
 	case StateLeaderboard:
 		return "Leaderboard"
+	case StateCodeInput:
+		return "CodeInput"
 	default:
 		return "State(unknown)"
 	}
