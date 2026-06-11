@@ -10,6 +10,7 @@ import (
 	"snake_golang/game/i18n"
 	gamelb "snake_golang/game/leaderboard"
 	"snake_golang/game/menu"
+	"strings"
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -53,6 +54,10 @@ type Screen struct {
 	leaderboardLoading bool
 	leaderboardError   string
 	leaderboardEntries []gamelb.Entry
+
+	versionInfoCh  chan versionInfoResult
+	updateRequired bool
+	latestVersion  string
 }
 
 func (s *Screen) StartGame() {
@@ -252,6 +257,9 @@ func (s *Screen) Draw(screen *ebiten.Image) {
 		menu.Draw(screen, s.FaceSource, s.Menu)
 		DrawMenuPlayerName(screen, s.FaceSource, s.PlayerName)
 		DrawMenuCodeHint(screen, s.FaceSource)
+		if s.updateRequired {
+			DrawUpdateBanner(screen, s.FaceSource, s.latestVersion)
+		}
 		return
 	}
 	if s.World != nil && s.World.State == StateLeaderboard {
@@ -264,7 +272,36 @@ func (s *Screen) Draw(screen *ebiten.Image) {
 	}
 	if s.World != nil && s.World.State == StateGameOver {
 		DrawGameOverSubmitStatus(screen, s.FaceSource, s)
+		if s.updateRequired {
+			DrawUpdateBanner(screen, s.FaceSource, s.latestVersion)
+		}
 	}
+}
+
+func DrawUpdateBanner(dst *ebiten.Image, face *etxt.GoTextFaceSource, latest string) {
+	if dst == nil || face == nil {
+		return
+	}
+	msg := i18n.T("update.required")
+	if strings.TrimSpace(latest) != "" {
+		msg = fmt.Sprintf(i18n.T("update.required_version"), latest)
+	}
+
+	bannerH := float32(ScreenHeight) * 0.09
+	if bannerH < 28 {
+		bannerH = 28
+	}
+	vector.FillRect(dst, 0, 0, float32(ScreenWidth), bannerH,
+		color.RGBA{R: 178, G: 34, B: 34, A: 235}, true)
+
+	size := FitFontSize(face, msg, UiLabelFontSize()*0.42, float64(ScreenWidth)*0.94, 8)
+	fo := &etxt.GoTextFace{Source: face, Size: size}
+	op := &etxt.DrawOptions{}
+	op.GeoM.Translate(float64(ScreenWidth)/2, float64(bannerH)/2)
+	op.PrimaryAlign = etxt.AlignCenter
+	op.SecondaryAlign = etxt.AlignCenter
+	op.ColorScale.ScaleWithColor(color.White)
+	etxt.Draw(dst, msg, fo, op)
 }
 
 func (s *Screen) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {

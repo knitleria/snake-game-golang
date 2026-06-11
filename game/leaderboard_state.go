@@ -8,6 +8,7 @@ import (
 	"snake_golang/assets/mods"
 	"snake_golang/assets/skins"
 	gamelb "snake_golang/game/leaderboard"
+	"snake_golang/internal/version"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
@@ -33,6 +34,32 @@ type leaderboardFetchResult struct {
 	err      error
 }
 
+type versionInfoResult struct {
+	info gamelb.VersionInfo
+	err  error
+}
+
+// CheckVersionAsync asks the server for the minimum supported client version and
+// flags the build as outdated when this client is below it. No-op for dev builds
+// (non-numeric version) so local development is never nagged.
+func (s *Screen) CheckVersionAsync() {
+	if s.LeaderboardClient == nil || !s.LeaderboardClient.Enabled() {
+		return
+	}
+	if !version.IsNumeric(version.Version) {
+		return
+	}
+	ch := make(chan versionInfoResult, 1)
+	s.versionInfoCh = ch
+	client := s.LeaderboardClient
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+		info, err := client.FetchVersionInfo(ctx)
+		ch <- versionInfoResult{info: info, err: err}
+	}()
+}
+
 func (s *Screen) resetScoreSubmitState() {
 	s.scoreSubmitCh = nil
 	s.scoreSubmitState = scoreSubmitIdle
@@ -53,6 +80,20 @@ func (s *Screen) pollLeaderboardAsync() {
 				s.scoreSubmitState = scoreSubmitSucceeded
 				s.scoreSubmitRank = result.response.Rank
 				s.scoreSubmitImproved = result.response.Improved
+			}
+		default:
+		}
+	}
+
+	if s.versionInfoCh != nil {
+		select {
+		case result := <-s.versionInfoCh:
+			s.versionInfoCh = nil
+			if result.err == nil {
+				s.latestVersion = strings.TrimSpace(result.info.LatestClientVersion)
+				if !version.AtLeast(version.Version, result.info.MinClientVersion) {
+					s.updateRequired = true
+				}
 			}
 		default:
 		}
@@ -106,7 +147,7 @@ func (s *Screen) onGameOver() {
 		Score:         s.World.Score,
 		Mode:          mods.Current().ID(),
 		Skin:          skins.Current().ID(),
-		ClientVersion: "dev",
+		ClientVersion: version.Version,
 		DurationMS:    durationMS,
 	}
 

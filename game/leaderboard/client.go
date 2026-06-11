@@ -52,6 +52,14 @@ func (c *Client) SubmitScore(ctx context.Context, req SubmitScoreRequest) (Submi
 	return out, nil
 }
 
+func (c *Client) FetchVersionInfo(ctx context.Context) (VersionInfo, error) {
+	var out VersionInfo
+	if err := c.doJSON(ctx, http.MethodGet, "/api/v1/version", nil, &out); err != nil {
+		return VersionInfo{}, err
+	}
+	return out, nil
+}
+
 func (c *Client) FetchLeaderboard(ctx context.Context, mode string, limit int) (LeaderboardResponse, error) {
 	query := url.Values{}
 	query.Set("mode", mode)

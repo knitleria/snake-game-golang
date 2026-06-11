@@ -31,6 +31,11 @@ type LeaderboardResponse struct {
 	Entries []Entry `json:"entries"`
 }
 
+type VersionInfo struct {
+	MinClientVersion    string `json:"min_client_version"`
+	LatestClientVersion string `json:"latest_client_version"`
+}
+
 type ErrorResponse struct {
 	Error string `json:"error"`
 }

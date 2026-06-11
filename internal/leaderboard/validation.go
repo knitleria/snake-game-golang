@@ -25,6 +25,7 @@ var (
 	ErrBadSkin         = errors.New("unknown skin")
 	ErrBadClientVer    = errors.New("client_version is too long")
 	ErrBadDuration     = errors.New("duration_ms is out of range")
+	ErrClientTooOld    = errors.New("client version is outdated, please update the game")
 )
 
 func ValidateSubmitRequest(req SubmitScoreRequest, maxScore int) (SubmitScoreRequest, error) {

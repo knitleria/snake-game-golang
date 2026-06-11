@@ -14,13 +14,17 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+
+	"snake_golang/internal/version"
 )
 
 const maxRequestBodyBytes = 16 * 1024
 
 type Handler struct {
-	store    Store
-	maxScore int
+	store               Store
+	maxScore            int
+	minClientVersion    string
+	latestClientVersion string
 }
 
 func NewHandler(ctx context.Context) (*Handler, error) {
@@ -43,13 +47,23 @@ func NewHandler(ctx context.Context) (*Handler, error) {
 	}
 
 	return &Handler{
-		store:    NewDynamoStore(client, tableName, indexName),
-		maxScore: maxScore,
+		store:               NewDynamoStore(client, tableName, indexName),
+		maxScore:            maxScore,
+		minClientVersion:    getenv("MIN_CLIENT_VERSION", ""),
+		latestClientVersion: getenv("LATEST_CLIENT_VERSION", ""),
 	}, nil
 }
 
 func NewHandlerWithStore(store Store, maxScore int) *Handler {
 	return &Handler{store: store, maxScore: maxScore}
+}
+
+// SetClientVersionPolicy configures the minimum accepted client version and the
+// latest available version advertised on GET /api/v1/version. An empty minimum
+// disables the version gate.
+func (h *Handler) SetClientVersionPolicy(minVersion, latestVersion string) {
+	h.minClientVersion = strings.TrimSpace(minVersion)
+	h.latestClientVersion = strings.TrimSpace(latestVersion)
 }
 
 func (h *Handler) Handle(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
@@ -70,15 +84,24 @@ func (h *Handler) Handle(ctx context.Context, req events.APIGatewayV2HTTPRequest
 	switch {
 	case method == "GET" && path == "/healthz":
 		return jsonResponse(200, map[string]string{"status": "ok"})
+	case method == "GET" && path == "/api/v1/version":
+		return h.handleVersion()
 	case method == "POST" && path == "/api/v1/scores":
 		return h.handleSubmitScore(ctx, req)
 	case method == "GET" && path == "/api/v1/leaderboard":
 		return h.handleLeaderboard(ctx, req)
-	case path == "/healthz" || path == "/api/v1/scores" || path == "/api/v1/leaderboard":
+	case path == "/healthz" || path == "/api/v1/version" || path == "/api/v1/scores" || path == "/api/v1/leaderboard":
 		return errorResponse(405, "method not allowed")
 	default:
 		return errorResponse(404, "not found")
 	}
+}
+
+func (h *Handler) handleVersion() (events.APIGatewayV2HTTPResponse, error) {
+	return jsonResponse(200, VersionInfoResponse{
+		MinClientVersion:    h.minClientVersion,
+		LatestClientVersion: h.latestClientVersion,
+	})
 }
 
 func requestBody(req events.APIGatewayV2HTTPRequest) ([]byte, error) {
@@ -105,6 +128,10 @@ func (h *Handler) handleSubmitScore(ctx context.Context, req events.APIGatewayV2
 	submit, err = ValidateSubmitRequest(submit, h.maxScore)
 	if err != nil {
 		return errorResponse(400, err.Error())
+	}
+
+	if !version.AtLeast(submit.ClientVersion, h.minClientVersion) {
+		return errorResponse(426, ErrClientTooOld.Error())
 	}
 
 	resp, err := h.store.SubmitScore(ctx, submit, time.Now())

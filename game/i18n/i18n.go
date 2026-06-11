@@ -57,6 +57,8 @@ var dict = map[Lang]map[string]string{
 		"code.success":              "Разблокировано! Скины и моды разблокированы",
 		"code.menu_hint":            "C - ввести код",
 		"lock.locked":               "Заблокировано",
+		"update.required":           "Доступно обновление! Обновите игру",
+		"update.required_version":   "Доступна версия %s — обновите игру",
 	},
 	LangEN: {
 		"menu.play":          "Play",
@@ -104,6 +106,8 @@ var dict = map[Lang]map[string]string{
 		"code.success":              "Unlocked! Skins and modes unlocked",
 		"code.menu_hint":            "C - enter code",
 		"lock.locked":               "Locked",
+		"update.required":           "Update available! Please update the game",
+		"update.required_version":   "Version %s available — please update the game",
 	},
 	LangUA: {
 		"menu.play":          "Грати",
@@ -151,6 +155,8 @@ var dict = map[Lang]map[string]string{
 		"code.success":              "Розблоковано! Скіни і режими розблоковані",
 		"code.menu_hint":            "C - ввести код",
 		"lock.locked":               "Заблоковано",
+		"update.required":           "Доступне оновлення! Оновіть гру",
+		"update.required_version":   "Доступна версія %s — оновіть гру",
 	},
 }
 

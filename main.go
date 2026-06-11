@@ -93,6 +93,7 @@ func main() {
 		PlayerID:          config.PlayerID,
 		LeaderboardClient: leaderboard.NewClientFromEnv(),
 	}
+	screen.CheckVersionAsync()
 	if err := ebiten.RunGame(screen); err != nil {
 		log.Fatal(err)
 	}
