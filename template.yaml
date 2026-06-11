@@ -101,6 +101,12 @@ Resources:
             ApiId: !Ref LeaderboardApi
             Path: /api/v1/leaderboard
             Method: GET
+        GetVersion:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref LeaderboardApi
+            Path: /api/v1/version
+            Method: GET
     Metadata:
       Dockerfile: Dockerfile
       DockerContext: .
